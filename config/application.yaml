@@ -1,0 +1,5 @@
+spring:
+  r2dbc:
+    url: r2dbc:mariadb://westworld:30006/dynamic_projects
+    username: root
+    password: secretpassword

@@ -1,0 +1,78 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: cimg/openjdk:17.0.3
+
+    working_directory: ~/repo
+
+    environment:
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            - v1-dependencies-
+
+      - run: ./gradlew dependencies
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      # run tests!
+      - run:
+          name: Unit Tests
+          command: ./gradlew test
+
+      - setup_remote_docker:
+          version: 19.03.13
+          docker_layer_caching: true
+
+      - run:
+          name: Package Jar
+          command: ./gradlew bootJar
+
+      - run: docker build -t bettercode.dev/oe-todo-dynamic-projects:$CIRCLE_BRANCH .
+      - store_test_results:
+          path: build/test-results
+
+  pushImage:
+    docker:
+      - image: cimg/openjdk:17.0.3
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run: ./gradlew -x test bootJar
+      - setup_remote_docker:
+          version: 19.03.13
+          docker_layer_caching: true
+      - run:
+          name: Build Docker image
+          command: docker build -t djagielo/oe-todo-dynamic-projects:main-$CIRCLE_SHA1 .
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+            docker push djagielo/oe-todo-dynamic-projects:main-$CIRCLE_SHA1
+
+workflows:
+  version: 2
+  build_test_push_image:
+    jobs:
+      - build
+      - pushImage:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - main
+                - publish-docker-image
+          context:
+            - oe-todo
