@@ -2,12 +2,14 @@ package dev.bettercode.dynamicprojects
 
 import dev.bettercode.dynamicprojects.application.DynamicProjectRepository
 import dev.bettercode.dynamicprojects.application.PredefinedDynamicProjectsService
+import dev.bettercode.dynamicprojects.application.ProjectRecalculationService
 import dev.bettercode.dynamicprojects.application.TaskId
 
 
 internal class DynamicProjectsFacade(
     private val dynamicProjectsRepo: DynamicProjectRepository,
-    private val predefinedDynamicProjectsService: PredefinedDynamicProjectsService
+    private val predefinedDynamicProjectsService: PredefinedDynamicProjectsService,
+    private val recalculationService: ProjectRecalculationService
 ) {
     suspend fun getProjects(): List<DynamicProjectDto> {
         return dynamicProjectsRepo.getPredefinedProjects().map {
@@ -27,6 +29,10 @@ internal class DynamicProjectsFacade(
 
     suspend fun initialize() {
         predefinedDynamicProjectsService.createPredefined()
+    }
+
+    suspend fun recalculateAll() {
+        recalculationService.recalculateAll()
     }
 
 }

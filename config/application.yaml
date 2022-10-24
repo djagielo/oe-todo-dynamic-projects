@@ -3,3 +3,5 @@ spring:
     url: r2dbc:mariadb://westworld:30006/dynamic_projects
     username: root
     password: secretpassword
+tasks:
+  url: http://westworld:31111/tasks

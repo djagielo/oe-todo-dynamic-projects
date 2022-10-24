@@ -18,14 +18,14 @@ import org.springframework.web.reactive.function.client.WebClient
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class TasksList(val content: List<TaskDto>, val totalElements: Long)
 
-class TasksClient(private val webClient: WebClient = WebClient.create()): TasksPort {
+class TasksClient(private val webClient: WebClient = WebClient.create(), private val tasksUrl: String): TasksPort {
 
     override suspend fun getAllOpen(page: Pageable): Page<TaskDto> {
         return fetchPage(page.pageNumber, page.pageSize)
     }
 
     private suspend fun fetchPage(pageNo: Int, pageSize: Int): Page<TaskDto> {
-        return webClient.get().uri("http://westworld:31111/tasks?page=${pageNo}&size=${pageSize}")
+        return webClient.get().uri("${tasksUrl}?page=${pageNo}&size=${pageSize}")
             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .retrieve()
             .bodyToMono(TasksList::class.java).map {

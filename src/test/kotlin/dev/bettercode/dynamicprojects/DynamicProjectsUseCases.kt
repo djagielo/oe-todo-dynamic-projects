@@ -19,7 +19,7 @@ class DynamicProjectsUseCases {
     private val tasksStub: TasksStub = TasksStub(emptyList())
 
     private val dynamicProjectsFacade: DynamicProjectsFacade =
-        DynamicProjectsConfiguration.dynamicProjectsFacade()
+        DynamicProjectsConfiguration.dynamicProjectsFacade(tasksStub)
 
     private var dynamicProjectHandlers: DynamicProjectHandlers =
         DynamicProjectsConfiguration.dynamicProjectHandlers(tasksStub)

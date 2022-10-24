@@ -4,6 +4,7 @@ import dev.bettercode.dynamicprojects.DynamicProjectsFacade
 import dev.bettercode.dynamicprojects.application.*
 import dev.bettercode.dynamicprojects.infra.db.inmemory.InMemoryDynamicProjectRepository
 import dev.bettercode.dynamicprojects.infra.tasks.TasksClient
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -14,10 +15,11 @@ class DynamicProjectsConfiguration {
 
         private val inMemoryDynamicProjectRepository = InMemoryDynamicProjectRepository()
 
-        internal fun dynamicProjectsFacade(): DynamicProjectsFacade {
+        internal fun dynamicProjectsFacade(tasksPort: TasksPort): DynamicProjectsFacade {
             return DynamicProjectsFacade(
                 inMemoryDynamicProjectRepository,
-                PredefinedDynamicProjectsService(inMemoryDynamicProjectRepository)
+                PredefinedDynamicProjectsService(inMemoryDynamicProjectRepository),
+                recalculationService = ProjectRecalculationService(inMemoryDynamicProjectRepository, tasksPort = tasksPort)
             )
         }
 
@@ -42,7 +44,8 @@ class DynamicProjectsConfiguration {
     ): DynamicProjectsFacade {
         return DynamicProjectsFacade(
             dynamicProjectsRepo = dynamicProjectRepo,
-            predefinedDynamicProjectsService = predefinedDynamicProjectsService
+            predefinedDynamicProjectsService = predefinedDynamicProjectsService,
+            recalculationService = projectRecalculationService
         )
     }
 
@@ -53,8 +56,9 @@ class DynamicProjectsConfiguration {
 
     @Bean
     internal fun projectRecalculationService(
-        dynamicProjectRepo: DynamicProjectRepository
+        dynamicProjectRepo: DynamicProjectRepository,
+        @Value("\${tasks.url}") tasksUrl: String
     ): ProjectRecalculationService {
-        return ProjectRecalculationService(dynamicProjectRepo, tasksPort = TasksClient())
+        return ProjectRecalculationService(dynamicProjectRepo, tasksPort = TasksClient(tasksUrl = tasksUrl))
     }
 }
