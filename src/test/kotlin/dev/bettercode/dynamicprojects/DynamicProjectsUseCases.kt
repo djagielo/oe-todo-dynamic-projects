@@ -7,6 +7,8 @@ import dev.bettercode.dynamicprojects.infra.tasks.TasksStub
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -17,10 +19,15 @@ class DynamicProjectsUseCases {
     private val tasksStub: TasksStub = TasksStub(emptyList())
 
     private val dynamicProjectsFacade: DynamicProjectsFacade =
-        DynamicProjectsConfiguration.dynamicProjectsFacade(tasksStub)
+        DynamicProjectsConfiguration.dynamicProjectsFacade()
 
-    private val dynamicProjectHandlers: DynamicProjectHandlers =
+    private var dynamicProjectHandlers: DynamicProjectHandlers =
         DynamicProjectsConfiguration.dynamicProjectHandlers(tasksStub)
+
+
+    private fun setupRecalculationWith(pageSize: Int) {
+        dynamicProjectHandlers = DynamicProjectsConfiguration.dynamicProjectHandlers(tasksStub, pageSize)
+    }
 
     @Test
     fun `create predefined dynamic-projects after first project gets created`(): Unit = runBlocking {
@@ -37,7 +44,7 @@ class DynamicProjectsUseCases {
     }
 
     @Test
-    fun `create predefined dynamic-projects on initilize`(): Unit = runBlocking {
+    fun `create predefined dynamic-projects on initialize`(): Unit = runBlocking {
         // given - any project gets created
         dynamicProjectsFacade.initialize()
 
@@ -129,9 +136,13 @@ class DynamicProjectsUseCases {
         assertThat(dynamicProjectsFacade.getTasksForAProject(overdueProject.id)).isEmpty()
     }
 
-    @Test
-    fun `recalculate all projects on demand`(): Unit = runBlocking {
-        // given a list of tasks
+    @ValueSource(ints = [1, 10, 100])
+    @ParameterizedTest
+    fun `recalculate all projects on demand`(pageSize: Int): Unit = runBlocking {
+        // given - recalculation setupUpWith page size
+        setupRecalculationWith(pageSize = pageSize)
+
+        // and a list of tasks
         val tasksCompletedToday = listOf(
             task(name = "task_due_tomorrow", dueDate = LocalDate.now().plusDays(1), Instant.now()),
             task(name = "task_due_in_a_month", dueDate = LocalDate.now().plusDays(30), Instant.now())
@@ -155,7 +166,6 @@ class DynamicProjectsUseCases {
         dynamicProjectHandlers.recalculateAllProjects(RecalculateAllProjects(eventId = UUID.randomUUID().toString()))
 
         // then
-
         assertThat(getTasksForProject("Today")).hasSameElementsAs(
             tasksForToday.map { it.id })
 

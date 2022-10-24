@@ -8,7 +8,8 @@ import java.util.function.Predicate
 
 internal class ProjectRecalculationService(
     private val dynamicProjectRepository: DynamicProjectRepository,
-    private val tasksPort: TasksPort
+    private val tasksPort: TasksPort,
+    private val pageSize: Int = 100
 ) {
     suspend fun recalculate(dynamicProjectId: DynamicProjectId) {
         dynamicProjectRepository.getProjectById(dynamicProjectId)?.let { project ->
@@ -32,7 +33,7 @@ internal class ProjectRecalculationService(
             project.clearTasks()
             val predicate = predicatesMap[project.name]!!
 
-            tasksPort.getAllOpen(100).buffer().collect { taskPage ->
+            tasksPort.getAllOpen(pageSize).buffer().collect { taskPage ->
                 val filteredTasks = taskPage.content.filter(predicate::test)
                 println("Processed page ${taskPage.pageable.pageNumber}")
                 project.addTasks(filteredTasks.map { it.id }.toSet())
