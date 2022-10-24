@@ -38,7 +38,7 @@ class DynamicProjectsIntegrationTests {
 
         val tasks = tasksCompletedToday + tasksOverdue + tasksForToday
 
-        WiremockStubs.stubTasks((tasks))
+        WiremockStubs.stubTasks((tasks.shuffled()))
 
 
         // when
