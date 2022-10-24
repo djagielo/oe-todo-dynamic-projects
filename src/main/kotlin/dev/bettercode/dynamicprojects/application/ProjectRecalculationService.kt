@@ -1,15 +1,14 @@
 package dev.bettercode.dynamicprojects.application
 
 import dev.bettercode.dynamicprojects.DynamicProjectId
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
+import kotlinx.coroutines.flow.buffer
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.function.Predicate
 
 internal class ProjectRecalculationService(
     private val dynamicProjectRepository: DynamicProjectRepository,
-    private val tasksQuery: TasksPort
+    private val tasksPort: TasksPort
 ) {
     suspend fun recalculate(dynamicProjectId: DynamicProjectId) {
         dynamicProjectRepository.getProjectById(dynamicProjectId)?.let { project ->
@@ -21,23 +20,22 @@ internal class ProjectRecalculationService(
                 "Overdue" to Predicate {
                     it.dueDate?.isBefore(
                         LocalDate.now()
-                    )
+                    ) == true
                 },
                 "Today" to Predicate {
                     it.dueDate?.isEqual(
                         LocalDate.now()
-                    )
+                    ) == true
                 }
             )
 
-            var page: Pageable = PageRequest.of(0, 100)
-            var tasks = tasksQuery.getAllOpen(page)
             project.clearTasks()
-            while (!tasks.isEmpty) {
-                val filteredTasks = tasks.filter(predicatesMap[project.name]!!).toSet()
+            val predicate = predicatesMap[project.name]!!
+
+            tasksPort.getAllOpen(100).buffer().collect { taskPage ->
+                val filteredTasks = taskPage.content.filter(predicate::test)
+                println("Processed page ${taskPage.pageable.pageNumber}")
                 project.addTasks(filteredTasks.map { it.id }.toSet())
-                page = page.next()
-                tasks = tasksQuery.getAllOpen(page)
             }
 
             dynamicProjectRepository.saveProject(project)

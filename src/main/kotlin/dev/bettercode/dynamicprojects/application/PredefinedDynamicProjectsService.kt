@@ -18,12 +18,12 @@ class PredefinedDynamicProjectsService(private val dynamicProjectRepository: Dyn
             "Overdue" to Predicate {
                 it.dueDate?.isBefore(
                     LocalDate.now()
-                )
+                ) == true
             },
             "Today" to Predicate {
                 it.dueDate?.isEqual(
                     LocalDate.now()
-                )
+                ) == true
             }
         )
 

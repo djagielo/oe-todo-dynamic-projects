@@ -1,36 +1,26 @@
 package dev.bettercode.dynamicprojects
 
-import com.nhaarman.mockito_kotlin.eq
 import dev.bettercode.dynamicprojects.TasksFixtures.Companion.task
 import dev.bettercode.dynamicprojects.application.*
 import dev.bettercode.dynamicprojects.config.DynamicProjectsConfiguration
+import dev.bettercode.dynamicprojects.infra.tasks.TasksStub
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.mockito.AdditionalMatchers
-import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.mock
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
-import org.springframework.data.domain.PageRequest
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-class DynamicProjectsFacadeUnitTest {
+class DynamicProjectsUseCases {
 
-    private fun <T> notEq(value: T): T {
-        return AdditionalMatchers.not(eq(value)) ?: value
-    }
-
-    private val tasksPort: TasksPort = mock(TasksPort::class.java)
+    private val tasksStub: TasksStub = TasksStub(emptyList())
 
     private val dynamicProjectsFacade: DynamicProjectsFacade =
-        DynamicProjectsConfiguration.dynamicProjectsFacade()
+        DynamicProjectsConfiguration.dynamicProjectsFacade(tasksStub)
 
     private val dynamicProjectHandlers: DynamicProjectHandlers =
-        DynamicProjectsConfiguration.dynamicProjectHandlers(tasksPort)
+        DynamicProjectsConfiguration.dynamicProjectHandlers(tasksStub)
 
     @Test
     fun `create predefined dynamic-projects after first project gets created`(): Unit = runBlocking {
@@ -47,13 +37,25 @@ class DynamicProjectsFacadeUnitTest {
     }
 
     @Test
+    fun `create predefined dynamic-projects on initilize`(): Unit = runBlocking {
+        // given - any project gets created
+        dynamicProjectsFacade.initialize()
+
+        // when
+        val dynamicProjects = dynamicProjectsFacade.getProjects()
+
+        // then
+        assertThat(dynamicProjects.map { it.name }).containsExactlyInAnyOrder(
+            "Completed today", "Today", "Overdue"
+        )
+    }
+
+    @Test
     fun `recalculate Overdue dynamic project membership`(): Unit = runBlocking {
         // given - any project to generate default ones
-        dynamicProjectHandlers.handleProjectCreated()
+        dynamicProjectsFacade.initialize()
         // and - Overdue project created as a result
-        val overdueProject = dynamicProjectsFacade.getProjectByName("Overdue")
-        assertThat(overdueProject).isNotNull
-        overdueProject!!
+        val overdueProject = dynamicProjectsFacade.getProjectByName("Overdue")!!
 
         // and - list of tasks
         val tasks = listOf(
@@ -68,9 +70,7 @@ class DynamicProjectsFacadeUnitTest {
             task(name = "task_due_month_ago", dueDate = LocalDate.now().minusDays(30))
         )
 
-        doReturn(Page.empty<TaskDto>()).`when`(tasksPort).getAllOpen(notEq(PageRequest.of(0, 100)))
-        doReturn(PageImpl((tasks + tasksOverdue).shuffled()))
-            .`when`(tasksPort).getAllOpen(eq(PageRequest.of(0, 100)))
+        setupTasks((tasks + tasksOverdue).shuffled())
 
         // when - Overdue project gets recalculated
         dynamicProjectHandlers.recalculateProject(RecalculateProject(overdueProject.id))
@@ -83,8 +83,8 @@ class DynamicProjectsFacadeUnitTest {
 
     @Test
     fun `should recalculate Overdue dynamic project membership when tasks no longer meet conditions`() = runBlocking {
-        // given - any project to generate default ones
-        dynamicProjectHandlers.handleProjectCreated()
+        // given - default projects initialized
+        dynamicProjectsFacade.initialize()
         // and - Overdue project created as a result
         val overdueProject = dynamicProjectsFacade.getProjectByName("Overdue")
         assertThat(overdueProject).isNotNull
@@ -120,25 +120,13 @@ class DynamicProjectsFacadeUnitTest {
                 dueDate = LocalDate.now().plus(1, ChronoUnit.MONTHS)
             )
         }
-        doReturn(PageImpl((tasks + tasksOverdue).shuffled()))
-            .`when`(tasksPort).getAllOpen(eq(PageRequest.of(0, 100)))
+        setupTasks((tasks + tasksOverdue).shuffled())
 
         // and - project gets recalculated again
         dynamicProjectHandlers.recalculateProject(RecalculateProject(overdueProject.id))
 
         // then
         assertThat(dynamicProjectsFacade.getTasksForAProject(overdueProject.id)).isEmpty()
-    }
-
-    private suspend fun setupTasks(tasks: List<TaskDto>) {
-        doReturn(Page.empty<TaskDto>()).`when`(tasksPort).getAllOpen(notEq(PageRequest.of(0, 100)))
-        doReturn(PageImpl((tasks.shuffled())))
-            .`when`(tasksPort).getAllOpen(eq(PageRequest.of(0, 100)))
-
-    }
-
-    private suspend fun getTasksForProject(projectName: String): Set<TaskId> {
-        return dynamicProjectsFacade.getTasksForAProject(dynamicProjectsFacade.getProjectByName(projectName)!!.id)
     }
 
     @Test
@@ -161,7 +149,7 @@ class DynamicProjectsFacadeUnitTest {
         setupTasks(tasksCompletedToday + tasksOverdue + tasksForToday)
 
         // and making assure that default projects are created
-        dynamicProjectHandlers.handleProjectCreated()
+        dynamicProjectsFacade.initialize()
 
         // when
         dynamicProjectHandlers.recalculateAllProjects(RecalculateAllProjects(eventId = UUID.randomUUID().toString()))
@@ -176,5 +164,13 @@ class DynamicProjectsFacadeUnitTest {
 
         assertThat(getTasksForProject("Completed today")).hasSameElementsAs(
             tasksCompletedToday.map { it.id })
+    }
+
+    private fun setupTasks(tasks: List<TaskDto>) {
+        tasksStub.setUp(tasks)
+    }
+
+    private suspend fun getTasksForProject(projectName: String): Set<TaskId> {
+        return dynamicProjectsFacade.getTasksForAProject(dynamicProjectsFacade.getProjectByName(projectName)!!.id)
     }
 }
