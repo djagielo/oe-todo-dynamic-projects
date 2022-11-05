@@ -10,6 +10,8 @@ import dev.bettercode.dynamicprojects.config.DynamicProjectsConfiguration
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.`when`
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -110,6 +112,18 @@ class DynamicProjectsRestHandlerTest {
                 it.expectBody().jsonPath("$.content[0].id").isEqualTo(expectedTasks[0].uuid!!)
                 it.expectBody().jsonPath("$.content[1].id").isEqualTo(expectedTasks[1].uuid!!)
                 it.expectBody().jsonPath("$.content[2].id").isEqualTo(expectedTasks[2].uuid!!)
+            })
+    }
+
+
+    @ValueSource(strings = ["lol"])
+    @ParameterizedTest
+    fun `validate dynamic project id`(id: String) {
+        client.get()
+            .uri("/dynamic-projects/$id/tasks")
+            .exchange()
+            .expectAll({
+                it.expectStatus().is4xxClientError
             })
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageImpl
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
+import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
 import org.springframework.web.reactive.function.server.bodyValueAndAwait
 import java.util.*
@@ -17,11 +18,15 @@ internal class DynamicProjectsRestHandler(private val dynamicProjectsFacade: Dyn
     }
 
     suspend fun getTasks(request: ServerRequest): ServerResponse {
-        val tasks =
-            dynamicProjectsFacade.getTasksForAProject(DynamicProjectId(id = UUID.fromString(request.pathVariable("projectId"))))
-        return ok().contentType(MediaType.APPLICATION_JSON).bodyValueAndAwait(PageImpl(tasks.toList().map {
-            mapOf("id" to it.uuid)
-        }))
+        try {
+            val tasks =
+                dynamicProjectsFacade.getTasksForAProject(DynamicProjectId(id = UUID.fromString(request.pathVariable("projectId"))))
+            return ok().contentType(MediaType.APPLICATION_JSON).bodyValueAndAwait(PageImpl(tasks.toList().map {
+                mapOf("id" to it.uuid)
+            }))
+        } catch (ex: IllegalArgumentException) {
+            return badRequest().bodyValueAndAwait("")
+        }
     }
 
     suspend fun initalize(request: ServerRequest): ServerResponse {

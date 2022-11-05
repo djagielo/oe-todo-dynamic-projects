@@ -29,6 +29,7 @@ internal open class DynamicProjectsFacade(
 
     open suspend fun initialize() {
         predefinedDynamicProjectsService.createPredefined()
+        recalculationService.recalculateAll()
     }
 
     open suspend fun recalculateAll() {
