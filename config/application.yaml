@@ -3,5 +3,6 @@ spring:
     url: r2dbc:mariadb://westworld:30006/dynamic_projects
     username: root
     password: secretpassword
-tasks:
+tasksClient:
   url: http://westworld:31111/tasks
+  timeoutMs: 3000
