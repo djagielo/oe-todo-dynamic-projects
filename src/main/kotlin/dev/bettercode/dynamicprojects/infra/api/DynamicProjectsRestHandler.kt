@@ -1,0 +1,3 @@
+package dev.bettercode.dynamicprojects.infra.api
+
+class DynamicProjectsRestHandler
