@@ -18,14 +18,16 @@ internal class DynamicProjectsRestHandler(private val dynamicProjectsFacade: Dyn
     }
 
     suspend fun getTasks(request: ServerRequest): ServerResponse {
-        try {
-            val tasks =
-                dynamicProjectsFacade.getTasksForAProject(DynamicProjectId(id = UUID.fromString(request.pathVariable("projectId"))))
-            return ok().contentType(MediaType.APPLICATION_JSON).bodyValueAndAwait(PageImpl(tasks.toList().map {
+        return try {
+            val dynamicProjectId = DynamicProjectId.fromString(request.pathVariable("projectId"))
+
+            val tasks = dynamicProjectsFacade.getTasksForAProject(dynamicProjectId).map {
                 mapOf("id" to it.uuid)
-            }))
+            }.toList()
+
+            ok().contentType(MediaType.APPLICATION_JSON).bodyValueAndAwait(PageImpl(tasks))
         } catch (ex: IllegalArgumentException) {
-            return badRequest().bodyValueAndAwait("")
+            badRequest().bodyValueAndAwait("")
         }
     }
 
