@@ -13,10 +13,6 @@ class DynamicProject(
         this.tasks.addAll(taskIds)
     }
 
-    fun tasks(): Set<TaskId> {
-        return this.tasks
-    }
-
     fun clearTasks() {
         this.tasks.clear()
     }

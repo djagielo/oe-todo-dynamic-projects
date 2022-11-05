@@ -1,0 +1,3 @@
+tasksClient:
+  url: http://localhost:9999/tasks
+  timeoutMs: 3000

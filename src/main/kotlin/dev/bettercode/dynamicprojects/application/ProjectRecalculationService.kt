@@ -1,43 +1,42 @@
 package dev.bettercode.dynamicprojects.application
 
 import dev.bettercode.dynamicprojects.DynamicProjectId
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
+import kotlinx.coroutines.flow.buffer
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.function.Predicate
 
 internal class ProjectRecalculationService(
     private val dynamicProjectRepository: DynamicProjectRepository,
-    private val tasksQuery: TasksPort
+    private val tasksPort: TasksPort,
+    private val pageSize: Int = 100
 ) {
     suspend fun recalculate(dynamicProjectId: DynamicProjectId) {
         dynamicProjectRepository.getProjectById(dynamicProjectId)?.let { project ->
             val predicatesMap = mapOf<String, Predicate<TaskDto>>(
                 "Completed today" to Predicate {
                     it.completionDate != null &&
-                            LocalDate.ofInstant(it.completionDate, ZoneId.systemDefault()).equals(LocalDate.now())
+                            LocalDate.ofInstant(it.completionDate, ZoneId.of("UTC"))
+                                .equals(LocalDate.now(ZoneId.of("UTC")))
                 },
                 "Overdue" to Predicate {
                     it.dueDate?.isBefore(
                         LocalDate.now()
-                    )
+                    ) == true
                 },
                 "Today" to Predicate {
                     it.dueDate?.isEqual(
                         LocalDate.now()
-                    )
+                    ) == true
                 }
             )
 
-            var page: Pageable = PageRequest.of(0, 100)
-            var tasks = tasksQuery.getAllOpen(page)
             project.clearTasks()
-            while (!tasks.isEmpty) {
-                val filteredTasks = tasks.filter(predicatesMap[project.name]!!).toSet()
+            val predicate = predicatesMap[project.name]!!
+
+            tasksPort.getAllOpen(pageSize).buffer().collect { taskPage ->
+                val filteredTasks = taskPage.content.filter(predicate::test)
                 project.addTasks(filteredTasks.map { it.id }.toSet())
-                page = page.next()
-                tasks = tasksQuery.getAllOpen(page)
             }
 
             dynamicProjectRepository.saveProject(project)
