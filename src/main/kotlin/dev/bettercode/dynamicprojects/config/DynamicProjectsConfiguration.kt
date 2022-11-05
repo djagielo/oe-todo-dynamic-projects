@@ -81,19 +81,17 @@ class DynamicProjectsConfiguration {
     }
 
     @Bean
-    fun dynamicProjectController(): DynamicProjectsRestHandler {
-        return DynamicProjectsRestHandler()
+    internal fun dynamicProjectController(dynamicProjectsFacade: DynamicProjectsFacade): DynamicProjectsRestHandler {
+        return DynamicProjectsRestHandler(dynamicProjectsFacade)
     }
 
     @Bean
-    fun routes(dynamicProjectsController: DynamicProjectsRestHandler) = coRouter {
+    internal fun routes(dynamicProjectsController: DynamicProjectsRestHandler) = coRouter {
         accept(MediaType.APPLICATION_JSON).nest {
-//            POST("/api/users", restController::createUser)
-//            DELETE("/api/users", restController::deleteUser)
-//
-//
-//            POST("/api/devices", restController::createDevice)
-//            DELETE("/api/devices", restController::deleteDevice)
+                GET("dynamic-projects", dynamicProjectsController::getList)
+                GET("dynamic-projects/{projectId}/tasks", dynamicProjectsController::getTasks)
+                POST("dynamic-projects/initialize", dynamicProjectsController::initalize)
+                POST("dynamic-projects/recalculateAll", dynamicProjectsController::recalculateAll)
         }
     }
 }

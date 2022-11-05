@@ -6,12 +6,12 @@ import dev.bettercode.dynamicprojects.application.ProjectRecalculationService
 import dev.bettercode.dynamicprojects.application.TaskId
 
 
-internal class DynamicProjectsFacade(
+internal open class DynamicProjectsFacade(
     private val dynamicProjectsRepo: DynamicProjectRepository,
     private val predefinedDynamicProjectsService: PredefinedDynamicProjectsService,
     private val recalculationService: ProjectRecalculationService
 ) {
-    suspend fun getProjects(): List<DynamicProjectDto> {
+    open suspend fun getProjects(): List<DynamicProjectDto> {
         return dynamicProjectsRepo.getPredefinedProjects().map {
             DynamicProjectDto.from(it)
         }.toList()
@@ -23,15 +23,15 @@ internal class DynamicProjectsFacade(
         }
     }
 
-    suspend fun getTasksForAProject(projectId: DynamicProjectId): Set<TaskId> {
+    open suspend fun getTasksForAProject(projectId: DynamicProjectId): Set<TaskId> {
         return dynamicProjectsRepo.findTasks(projectId)
     }
 
-    suspend fun initialize() {
+    open suspend fun initialize() {
         predefinedDynamicProjectsService.createPredefined()
     }
 
-    suspend fun recalculateAll() {
+    open suspend fun recalculateAll() {
         recalculationService.recalculateAll()
     }
 
