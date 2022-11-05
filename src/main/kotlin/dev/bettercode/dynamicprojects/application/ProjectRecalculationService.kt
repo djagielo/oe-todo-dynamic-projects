@@ -35,7 +35,6 @@ internal class ProjectRecalculationService(
 
             tasksPort.getAllOpen(pageSize).buffer().collect { taskPage ->
                 val filteredTasks = taskPage.content.filter(predicate::test)
-                println("Processed page ${taskPage.pageable.pageNumber}")
                 project.addTasks(filteredTasks.map { it.id }.toSet())
             }
 

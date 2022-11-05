@@ -25,7 +25,6 @@ class TasksStub(private var tasks: List<TaskDto>) : TasksPort {
     override suspend fun getAllOpen(pageSize: Int): Flow<Page<TaskDto>> = channelFlow {
         var page = 0
         do {
-            println("Fetching task page $page")
             val tasks = getAllOpen(PageRequest.of(page, pageSize))
             send(tasks)
             page += 1

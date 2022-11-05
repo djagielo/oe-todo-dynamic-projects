@@ -36,7 +36,6 @@ class TasksClient(private val webClient: WebClient = WebClient.create(), private
     override suspend fun getAllOpen(pageSize: Int): Flow<Page<TaskDto>> = channelFlow {
         var page = 0
         do {
-            println("Fetching task page $page")
             val tasks = fetchPage(page++, pageSize)
             send(tasks)
         }while (!tasks.isEmpty)
