@@ -3,9 +3,11 @@ package dev.bettercode.dynamicprojects
 import dev.bettercode.dynamicprojects.TasksFixtures.Companion.task
 import dev.bettercode.dynamicprojects.application.*
 import dev.bettercode.dynamicprojects.config.DynamicProjectsConfiguration
+import dev.bettercode.dynamicprojects.infra.db.inmemory.InMemoryDynamicProjectRepository
 import dev.bettercode.dynamicprojects.infra.tasks.TasksStub
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -16,17 +18,31 @@ import java.util.*
 
 class DynamicProjectsUseCases {
 
-    private val tasksStub: TasksStub = TasksStub(emptyList())
+    private lateinit var tasksStub: TasksStub
 
-    private val dynamicProjectsFacade: DynamicProjectsFacade =
-        DynamicProjectsConfiguration.dynamicProjectsFacade(tasksStub)
+    private lateinit var dynamicProjectsFacade: DynamicProjectsFacade
 
-    private var dynamicProjectHandlers: DynamicProjectHandlers =
-        DynamicProjectsConfiguration.dynamicProjectHandlers(tasksStub)
+    private lateinit var dynamicProjectHandlers: DynamicProjectHandlers
+    private lateinit var inMemoryDynamicProjectRepository: InMemoryDynamicProjectRepository
 
 
-    private fun setupRecalculationWith(pageSize: Int) {
-        dynamicProjectHandlers = DynamicProjectsConfiguration.dynamicProjectHandlers(tasksStub, pageSize)
+    private fun setupRecalculationWith(
+        pageSize: Int
+    ) {
+        dynamicProjectHandlers =
+            DynamicProjectsConfiguration.dynamicProjectHandlers(inMemoryDynamicProjectRepository, tasksStub, pageSize)
+    }
+
+    @BeforeEach
+    fun beforeEach() {
+        inMemoryDynamicProjectRepository = InMemoryDynamicProjectRepository()
+        tasksStub = TasksStub(emptyList())
+        dynamicProjectsFacade = DynamicProjectsConfiguration.dynamicProjectsFacade(
+            inMemoryDynamicProjectRepository = inMemoryDynamicProjectRepository,
+            tasksStub
+        )
+        dynamicProjectHandlers =
+            DynamicProjectsConfiguration.dynamicProjectHandlers(inMemoryDynamicProjectRepository, tasksStub)
     }
 
     @Test
@@ -157,13 +173,52 @@ class DynamicProjectsUseCases {
             task(name = "task for today", dueDate = LocalDate.now())
         )
 
-        setupTasks(tasksCompletedToday + tasksOverdue + tasksForToday)
-
         // and making assure that default projects are created
+        setupTasks(emptyList())
         dynamicProjectsFacade.initialize()
+        assertThat(getTasksForProject("Today")).isEmpty()
+        assertThat(getTasksForProject("Overdue")).isEmpty()
+        assertThat(getTasksForProject("Completed today")).isEmpty()
 
         // when
+        setupTasks(tasksCompletedToday + tasksOverdue + tasksForToday)
         dynamicProjectHandlers.recalculateAllProjects(RecalculateAllProjects(eventId = UUID.randomUUID().toString()))
+
+        // then
+        assertThat(getTasksForProject("Today")).hasSameElementsAs(
+            tasksForToday.map { it.id })
+
+        assertThat(getTasksForProject("Overdue")).hasSameElementsAs(
+            tasksOverdue.map { it.id })
+
+        assertThat(getTasksForProject("Completed today")).hasSameElementsAs(
+            tasksCompletedToday.map { it.id })
+    }
+
+    @Test
+    fun `recalculate all projects on initialization`(): Unit = runBlocking {
+        // given - recalculation setupUpWith page size
+        setupRecalculationWith(pageSize = 100)
+
+        // and a list of tasks
+        val tasksCompletedToday = listOf(
+            task(name = "task_due_tomorrow", dueDate = LocalDate.now().plusDays(1), Instant.now()),
+            task(name = "task_due_in_a_month", dueDate = LocalDate.now().plusDays(30), Instant.now())
+        )
+
+        val tasksOverdue = listOf(
+            task(name = "task_due_2_days_ago", dueDate = LocalDate.now().minusDays(2)),
+            task(name = "task_due_month_ago", dueDate = LocalDate.now().minusDays(30))
+        )
+
+        val tasksForToday = listOf(
+            task(name = "task for today", dueDate = LocalDate.now())
+        )
+
+        setupTasks(tasksCompletedToday + tasksOverdue + tasksForToday)
+
+        // when
+        dynamicProjectsFacade.initialize()
 
         // then
         assertThat(getTasksForProject("Today")).hasSameElementsAs(

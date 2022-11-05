@@ -17,9 +17,8 @@ class DynamicProjectsConfiguration {
 
     companion object {
 
-        private val inMemoryDynamicProjectRepository = InMemoryDynamicProjectRepository()
 
-        internal fun dynamicProjectsFacade(tasksPort: TasksPort): DynamicProjectsFacade {
+        internal fun dynamicProjectsFacade(inMemoryDynamicProjectRepository: InMemoryDynamicProjectRepository, tasksPort: TasksPort): DynamicProjectsFacade {
             return DynamicProjectsFacade(
                 inMemoryDynamicProjectRepository,
                 PredefinedDynamicProjectsService(inMemoryDynamicProjectRepository),
@@ -30,7 +29,7 @@ class DynamicProjectsConfiguration {
             )
         }
 
-        internal fun dynamicProjectHandlers(tasksPort: TasksPort, pageSize: Int = 100): DynamicProjectHandlers {
+        internal fun dynamicProjectHandlers(inMemoryDynamicProjectRepository: InMemoryDynamicProjectRepository, tasksPort: TasksPort, pageSize: Int = 100): DynamicProjectHandlers {
             return DynamicProjectHandlers(
                 PredefinedDynamicProjectsService(inMemoryDynamicProjectRepository),
                 ProjectRecalculationService(inMemoryDynamicProjectRepository, tasksPort, pageSize = pageSize)
