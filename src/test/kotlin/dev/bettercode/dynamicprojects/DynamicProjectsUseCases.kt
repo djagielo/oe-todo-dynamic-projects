@@ -7,6 +7,7 @@ import dev.bettercode.dynamicprojects.infra.db.inmemory.InMemoryDynamicProjectRe
 import dev.bettercode.dynamicprojects.infra.tasks.TasksStub
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -23,7 +24,7 @@ class DynamicProjectsUseCases {
     private lateinit var dynamicProjectsFacade: DynamicProjectsFacade
 
     private lateinit var dynamicProjectHandlers: DynamicProjectHandlers
-    private lateinit var inMemoryDynamicProjectRepository: InMemoryDynamicProjectRepository
+    private val inMemoryDynamicProjectRepository = InMemoryDynamicProjectRepository()
 
 
     private fun setupRecalculationWith(
@@ -35,7 +36,6 @@ class DynamicProjectsUseCases {
 
     @BeforeEach
     fun beforeEach() {
-        inMemoryDynamicProjectRepository = InMemoryDynamicProjectRepository()
         tasksStub = TasksStub(emptyList())
         dynamicProjectsFacade = DynamicProjectsConfiguration.dynamicProjectsFacade(
             inMemoryDynamicProjectRepository = inMemoryDynamicProjectRepository,
@@ -43,6 +43,11 @@ class DynamicProjectsUseCases {
         )
         dynamicProjectHandlers =
             DynamicProjectsConfiguration.dynamicProjectHandlers(inMemoryDynamicProjectRepository, tasksStub)
+    }
+
+    @AfterEach
+    fun afterEach() {
+        inMemoryDynamicProjectRepository.clear()
     }
 
     @Test

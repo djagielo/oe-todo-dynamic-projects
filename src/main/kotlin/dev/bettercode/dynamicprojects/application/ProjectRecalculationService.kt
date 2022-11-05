@@ -16,7 +16,8 @@ internal class ProjectRecalculationService(
             val predicatesMap = mapOf<String, Predicate<TaskDto>>(
                 "Completed today" to Predicate {
                     it.completionDate != null &&
-                            LocalDate.ofInstant(it.completionDate, ZoneId.of("UTC")).equals(LocalDate.now())
+                            LocalDate.ofInstant(it.completionDate, ZoneId.of("UTC"))
+                                .equals(LocalDate.now(ZoneId.of("UTC")))
                 },
                 "Overdue" to Predicate {
                     it.dueDate?.isBefore(

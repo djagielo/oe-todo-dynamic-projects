@@ -9,7 +9,6 @@ import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
 import org.springframework.web.reactive.function.server.bodyValueAndAwait
-import java.util.*
 
 internal class DynamicProjectsRestHandler(private val dynamicProjectsFacade: DynamicProjectsFacade) {
     suspend fun getList(request: ServerRequest): ServerResponse {

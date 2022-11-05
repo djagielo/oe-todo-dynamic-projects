@@ -26,7 +26,7 @@ class WiremockStubs {
                                             "uuid": "${task.id.uuid}"
                                         },
                                         "name": "${task.name}",
-                                        "completionDate": ${task.completionDate?.let { instantToDateString(it) } ?: null},
+                                        "completionDate": ${task.completionDate?.let { instantToDateString(it) }},
                                         "dueDate": ${task.dueDate?.let { "\"${it.format(DateTimeFormatter.ISO_DATE)}\"" } ?: null}
                                     }
                                 """.trimIndent()

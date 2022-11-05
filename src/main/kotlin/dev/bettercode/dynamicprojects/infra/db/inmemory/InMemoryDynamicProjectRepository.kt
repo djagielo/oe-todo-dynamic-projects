@@ -31,4 +31,8 @@ class InMemoryDynamicProjectRepository : DynamicProjectRepository {
     override suspend fun findTasks(projectId: DynamicProjectId): Set<TaskId> {
         return db[projectId.id]?.tasks ?: emptySet()
     }
+
+    fun clear() {
+        db.clear()
+    }
 }
